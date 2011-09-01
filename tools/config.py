@@ -270,6 +270,7 @@ DATA["CONFIG_OTP_KEY"] = {
 	"name": "OTP Key (in base32 encoded format)",
 	"depends": ["CONFIG_OTP"],
 	"default": "",
+	"value": "1234123412341234",
         "type": "text",
         "help": "OTP Key in base32 encoded format (spaces will be ignored)"	}
 
