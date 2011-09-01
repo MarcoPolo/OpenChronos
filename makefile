@@ -3,7 +3,7 @@
 CPU	= MSP430
 CC  = msp430-gcc
 LD  = msp430-ld
-PYTHON = python
+PYTHON := $(shell which python2 || which python)
 
 PROJ_DIR	=.
 BUILD_DIR = build
@@ -21,7 +21,7 @@ CC_INCLUDE = -I$(PROJ_DIR)/ -I$(PROJ_DIR)/include/ -I$(PROJ_DIR)/gcc/ -I$(PROJ_D
 CC_COPT		=  $(CC_CMACH) $(CC_DMACH) $(CC_DOPT)  $(CC_INCLUDE) 
 
 LOGIC_SOURCE = logic/acceleration.c logic/alarm.c logic/altitude.c logic/battery.c  logic/clock.c logic/date.c logic/menu.c logic/rfbsl.c logic/rfsimpliciti.c logic/stopwatch.c logic/temperature.c logic/test.c logic/user.c logic/phase_clock.c logic/eggtimer.c logic/prout.c logic/vario.c logic/sidereal.c logic/strength.c \
-				logic/sequence.c logic/gps.c logic/otp.c
+				logic/sequence.c logic/gps.c logic/otp.c logic/dst.c
 
 LOGIC_O = $(addsuffix .o,$(basename $(LOGIC_SOURCE)))
 
@@ -97,7 +97,7 @@ etags: $(ALL_C)
 
 even_in_range:
 	@echo "Assembling $@ in one step for $(CPU)..."
-	msp430-gcc -D_GNU_ASSEMBLER_ -x assembler-with-cpp -c even_in_range.s -o even_in_range.o
+	$(CC) -D_GNU_ASSEMBLER_ -x assembler-with-cpp -c even_in_range.s -o even_in_range.o
 
 clean: 
 	@echo "Removing files..."
@@ -108,11 +108,11 @@ build:
 	mkdir -p build
 
 config.h:
-	python tools/config.py
+	$(PYTHON) tools/config.py
 	git update-index --assume-unchanged config.h 2> /dev/null || true
 
 config:
-	python tools/config.py
+	$(PYTHON) tools/config.py
 	git update-index --assume-unchanged config.h 2> /dev/null || true
 
 help:

@@ -65,6 +65,11 @@
 #include "acceleration.h"
 #endif
 
+//prout
+#ifdef CONFIG_PROUT
+#include "prout.h"
+#endif
+
 //pfs
 #ifndef ELIMINATE_BLUEROBIN
 #include "bluerobin.h"
@@ -78,6 +83,11 @@
 
 #ifdef CONFIG_SIDEREAL
 #include "sidereal.h"
+#endif
+
+#if (CONFIG_DST > 0)
+#include "dst.h"
+#include "date.h"
 #endif
 
 #ifdef CONFIG_STRENGTH
@@ -111,6 +121,9 @@ struct timer sTimer;
 extern void BRRX_TimerTask_v(void);
 extern void to_lpm(void);
 
+#ifdef CONFIG_ALTI_ACCUMULATOR
+extern u8 alt_accum_enable; // 1 means the altitude accumulator is enabled
+#endif
 
 // *************************************************************************************************
 // @fn          Timer0_Init
@@ -365,25 +378,64 @@ __interrupt void TIMER0_A0_ISR(void)
 		// If the chime is enabled, we beep here
 		if (sTime.minute == 0) {
 			if (sAlarm.hourly == ALARM_ENABLED) {
-				request.flag.buzzer = 1;
+				request.flag.alarm_buzzer = 1;
 			}
+            #if (CONFIG_DST > 0)
+            if ((sTime.hour == 1) &&
+                (dst_state == 0) &&
+                dst_isDateInDST(sDate.month, sDate.day))
+            {
+                // spring forward
+                sTime.hour++;
+                dst_state = 1;
+            }
+            if ((sTime.hour == 2) &&
+                (dst_state != 0) &&
+                (!dst_isDateInDST(sDate.month, sDate.day)))
+            {
+                // fall back
+                sTime.hour--;
+                dst_state = 0;
+            }
+            #endif
 		}
 		// Check if alarm needs to be turned on
 		check_alarm();
+		#endif
+		#ifdef CONFIG_ALTI_ACCUMULATOR
+		// Check if we need to do an altitude accumulation
+		if (alt_accum_enable)
+			request.flag.altitude_accumulator = 1;
 		#endif
 	}
 
 	// -------------------------------------------------------------------
 	// Service active modules that require 1/s processing
-	
-	#ifdef CONFIG_ALARM  // N8VI NOTE eventually, eggtimer should use this code too
+#ifdef CONFIG_EGGTIMER
+	if (sEggtimer.state == EGGTIMER_RUN) {
+		eggtimer_tick(); // Subtract 1 second from eggtimer's count
+	}
+
+	if (sEggtimer.state == EGGTIMER_ALARM) { // no "else if" intentional
+		// Decrement alarm duration counter
+		if (sEggtimer.duration-- > 0)
+		{
+			request.flag.eggtimer_buzzer = 1;
+		}
+		else
+		{
+			stop_eggtimer_alarm(); // Set state to Stop and reset duration
+		}
+	}
+#endif
+	#ifdef CONFIG_ALARM
 	// Generate alarm signal
 	if (sAlarm.state == ALARM_ON) 
 	{
 		// Decrement alarm duration counter
 		if (sAlarm.duration-- > 0)
 		{
-			request.flag.buzzer = 1;
+			request.flag.alarm_buzzer = 1;
 		}
 		else
 		{
@@ -392,7 +444,11 @@ __interrupt void TIMER0_A0_ISR(void)
 		}
 	}
 	#endif
-
+	
+#ifdef CONFIG_PROUT
+        if (is_prout()) prout_tick();
+#endif
+		
 #ifdef CONFIG_STRENGTH
         // One more second gone by.
         if(is_strength())
@@ -485,6 +541,23 @@ __interrupt void TIMER0_A0_ISR(void)
 		if (sTime.system_time - sTime.last_activity > INACTIVITY_TIME) sys.flag.idle_timeout = 1; //setFlag(sysFlag_g, SYS_TIMEOUT_IDLE);
 	}
 	
+	// -------------------------------------------------------------------
+	// Turn the Backlight off after timeout
+	if (sButton.backlight_status == 1)
+	{
+		if (sButton.backlight_timeout > BACKLIGHT_TIME_ON)
+		{
+			//turn off Backlight
+			P2OUT &= ~BUTTON_BACKLIGHT_PIN;
+			P2DIR &= ~BUTTON_BACKLIGHT_PIN;
+			sButton.backlight_timeout = 0;
+			sButton.backlight_status = 0;
+		}
+		else
+		{
+			sButton.backlight_timeout++;
+		}
+	}
 	// -------------------------------------------------------------------
 	// Detect continuous button high states
 
@@ -645,17 +718,11 @@ __interrupt void TIMER0_A1_5_ISR(void)
 #ifdef CONFIG_STOP_WATCH
 					update_stopwatch_timer();
 #endif
-#ifdef CONFIG_EGGTIMER
-					update_eggtimer_timer();
-#endif
 					// Enable timer interrupt    
 					TA0CCTL2 |= CCIE; 	
 					// Increase stopwatch counter
 #ifdef CONFIG_STOP_WATCH
 					stopwatch_tick();
-#endif
-#ifdef CONFIG_EGGTIMER
-					eggtimer_tick();
 #endif
 					break;
 					
@@ -687,4 +754,3 @@ __interrupt void TIMER0_A1_5_ISR(void)
 	// Exit from LPM3 on RETI
 	_BIC_SR_IRQ(LPM3_bits);               
 }
-

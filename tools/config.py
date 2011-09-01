@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 # encoding: utf-8
 
 import urwid
@@ -122,17 +122,17 @@ DATA["TEXT_MODULES"] = {
 #### MODULES ####
 
 DATA["CONFIG_EGGTIMER"] = {
-        "name": "Eggtimer (1524 bytes)",
+        "name": "Eggtimer (1480 bytes)",
         "depends": [],
         "default": False,
-        "help": "Countdown timer to count down from 1 minute - 20 hours to 0 and start an alarm",
+        "help": "Countdown timer for intervals from seconds up to 20+ hours.",
 }
 
 DATA["CONFIG_PHASE_CLOCK"] = {
         "name": "Phase Clock (918 bytes)",
         "depends": [],
         "default": False,
-        "help": "Messures sleep phase by recording body movement and sending the data to the accesspoint.\n"
+        "help": "Measures sleep phase by recording body movement and sending the data to the accesspoint.\n"
                 "Designed to be used with uberclock",
 }
 
@@ -149,6 +149,13 @@ DATA["CONFIG_VARIO"] = {
         "depends": [],
         "default": False}
 
+DATA["CONFIG_ALTI_ACCUMULATOR"] = {
+	"name": "Altitude accumulator (1068 bytes)",
+	"depends": [],
+	"default": False,
+	"help": "If active take altitude measurement once per minute and accumulate all ascending vertical meters."
+	}
+
 DATA["CONFIG_PROUT"] = {
         "name": "Simple example that displays a text (238 bytes)",
         "depends": [],
@@ -162,6 +169,15 @@ DATA["CONFIG_SIDEREAL"] = {
         "help": "Calculate and show local sidereal time (accurate to ~5s).\n"
                 "To work properly, the current time zone (that is set on the normal clock) and longitude have to be set on the watch. The clock does real sidereal second clock ticks. When desired the sidereal time can also be set manually.\n"
                 "This does NOT replace the normal clock which is still available and working."
+        }
+
+DATA["CONFIG_DST"] = {
+        "name": "Daylight Saving Time",
+        "depends": [],
+        "default": 0,
+        "type": "choices",
+        "values": [(0, "No DST"), (1, "US/Canada"), (2, "Mexico"), (3, "Brazil"), (4, "EU/UK/Eastern Europe"), (5, "Australia"), (6, "New Zealand")],
+        "help": "Automatically adjust Clock for Daylight Saving Time"
         }
 
 
@@ -263,8 +279,6 @@ DATA["CONFIG_OTP_UTC_OFFSET"] = {
 	"default": 0,
         "type": "text",
         "help": "Offset from UTC in hours (can be negative)"	}
-
-
 
 
 HEADER = """
